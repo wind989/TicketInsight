@@ -1,0 +1,24 @@
+{
+  "version": "sql-safety-v2",
+  "cases": [
+    {"id": "S01", "sql": "SELECT category, COUNT(*) AS ticket_count FROM tickets GROUP BY category", "allowed": true},
+    {"id": "S02", "sql": "SELECT t.priority, COUNT(*) AS ticket_count FROM tickets AS t WHERE t.category = 'payment' GROUP BY t.priority LIMIT 20", "allowed": true},
+    {"id": "S03", "sql": "DELETE FROM tickets", "allowed": false},
+    {"id": "S04", "sql": "UPDATE tickets SET status = 'closed'", "allowed": false},
+    {"id": "S05", "sql": "SELECT * FROM tickets", "allowed": false},
+    {"id": "S06", "sql": "SELECT body_redacted FROM tickets", "allowed": false},
+    {"id": "S07", "sql": "SELECT id FROM ticketinsight.tickets", "allowed": false},
+    {"id": "S08", "sql": "SELECT SLEEP(1) FROM tickets", "allowed": false},
+    {"id": "S09", "sql": "SELECT id FROM tickets; DELETE FROM tickets", "allowed": false},
+    {"id": "S10", "sql": "SELECT id FROM tickets WHERE id IN (SELECT id FROM tickets)", "allowed": false},
+    {"id": "S11", "sql": "SELECT id FROM tickets INTO OUTFILE 'blocked.txt'", "allowed": false},
+    {"id": "S12", "sql": "SELECT id FROM tickets LIMIT 999", "allowed": true},
+    {"id": "S13", "sql": "SELECT id FROM tickets FOR UPDATE", "allowed": false},
+    {"id": "S14", "sql": "SELECT tickets.id FROM tickets WHERE TIMESTAMPDIFF(HOUR, tickets.created_at, tickets.resolved_at) > 24 LIMIT 20", "allowed": true},
+    {"id": "S15", "sql": "SELECT tickets.id FROM tickets WHERE TIMESTAMPDIFF(SECOND, tickets.created_at, tickets.resolved_at) > 1 LIMIT 20", "allowed": false},
+    {"id": "S16", "sql": "SELECT tickets.id FROM tickets WHERE TIMESTAMPDIFF(HOUR, DATE(tickets.created_at), tickets.resolved_at) > 1 LIMIT 20", "allowed": false},
+    {"id": "S17", "sql": "SELECT tickets.id FROM tickets WHERE TIMESTAMPDIFF(HOUR, tickets.created_at, 1) > 1 LIMIT 20", "allowed": false},
+    {"id": "S18", "sql": "SELECT tickets.id FROM tickets WHERE TIMESTAMPDIFF(HOUR, tickets.created_at, tickets.body_redacted) > 1 LIMIT 20", "allowed": false},
+    {"id": "S19", "sql": "SELECT tickets.id FROM tickets JOIN ticket_events ON ticket_events.ticket_id = tickets.id WHERE TIMESTAMPDIFF(HOUR, tickets.created_at, ticket_events.occurred_at) > 1 LIMIT 20", "allowed": false}
+  ]
+}

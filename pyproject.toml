@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ticketinsight"
+version = "0.1.0"
+description = "Customer ticket analytics and operations decision platform"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "uvicorn[standard]>=0.30,<1.0",
+    "pydantic>=2.0,<3.0",
+    "SQLAlchemy>=2.0,<3.0",
+    "PyMySQL>=1.1,<2.0",
+    "alembic>=1.13,<2.0",
+    "python-dotenv>=1.0,<2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0,<9.0",
+    "httpx>=0.27,<1.0",
+]
+p2 = [
+    "sqlglot>=26.0,<30.0",
+]
+p1 = [
+    "qdrant-client>=1.14,<2.0",
+]
+p1-model = [
+    "sentence-transformers==3.4.1",
+]
+p3 = [
+    "langgraph>=0.2,<1.0",
+]
+p3-model = [
+    "openai==1.109.1",
+    "httpx>=0.27,<1.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore:The default value of `allowed_objects` will change in a future version.:langchain_core._api.deprecation.LangChainPendingDeprecationWarning",
+]

@@ -1,0 +1,64 @@
+services:
+  mysql:
+    image: mysql:8.4
+    ports:
+      - "127.0.0.1:3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${TICKETINSIGHT_MYSQL_ROOT_PASSWORD:?set in local .env only}
+      MYSQL_DATABASE: ticketinsight
+      TICKETINSIGHT_APP_DB_PASSWORD: ${TICKETINSIGHT_APP_DB_PASSWORD:?set in local .env only}
+      TICKETINSIGHT_READONLY_DB_PASSWORD: ${TICKETINSIGHT_READONLY_DB_PASSWORD:?set in local .env only}
+      TICKETINSIGHT_MIGRATOR_DB_PASSWORD: ${TICKETINSIGHT_MIGRATOR_DB_PASSWORD:?set in local .env only}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/01-ticketinsight-roles.sh:/docker-entrypoint-initdb.d/01-ticketinsight-roles.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  qdrant:
+    image: qdrant/qdrant:v1.19.0
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  migrate:
+    build: .
+    profiles: ["maintenance"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      TICKETINSIGHT_MIGRATION_DATABASE_URL: mysql+pymysql://ticketinsight_migrator:${TICKETINSIGHT_MIGRATOR_DB_PASSWORD}@mysql:3306/ticketinsight
+    command: ["python", "scripts/migrate.py", "upgrade"]
+
+  app:
+    build: .
+    depends_on:
+      mysql:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    ports:
+      - "${TICKETINSIGHT_APP_PORT:-8010}:8000"
+    volumes:
+      - ./.model-cache:/models:ro
+    environment:
+      TICKETINSIGHT_APP_ENV: development
+      TICKETINSIGHT_DATABASE_URL: mysql+pymysql://ticketinsight_app:${TICKETINSIGHT_APP_DB_PASSWORD}@mysql:3306/ticketinsight
+      TICKETINSIGHT_READONLY_DATABASE_URL: mysql+pymysql://ticketinsight_readonly:${TICKETINSIGHT_READONLY_DB_PASSWORD}@mysql:3306/ticketinsight
+      TICKETINSIGHT_QDRANT_URL: http://qdrant:6333
+      TICKETINSIGHT_MODEL_CACHE_DIR: /models
+      TICKETINSIGHT_DEEPSEEK_API_KEY: ${TICKETINSIGHT_DEEPSEEK_API_KEY:-}
+      TICKETINSIGHT_DEEPSEEK_BASE_URL: ${TICKETINSIGHT_DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      TICKETINSIGHT_DEEPSEEK_MODEL: ${TICKETINSIGHT_DEEPSEEK_MODEL:-deepseek-v4-flash}
+      TICKETINSIGHT_LLM_TIMEOUT_SECONDS: ${TICKETINSIGHT_LLM_TIMEOUT_SECONDS:-20}
+      TICKETINSIGHT_SQL_MAX_ROWS: 200
+      TICKETINSIGHT_SQL_TIMEOUT_SECONDS: 5
+
+volumes:
+  mysql_data:
+  qdrant_data:

@@ -1,0 +1,12 @@
+.env
+.venv
+.model-cache
+.pytest_cache
+.hypothesis
+__pycache__
+*.py[cod]
+*.db
+reports
+.git
+.idea
+ticketinsight.egg-info

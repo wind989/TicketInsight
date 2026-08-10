@@ -1,0 +1,21 @@
+{
+  "version": "synthetic-operations-v1",
+  "dataset": "TicketInsight fixed synthetic/de-identified data",
+  "questions": [
+    {"id": "Q01", "question": "为什么本周支付类投诉增加？", "category": "payment", "expected_source_types": ["ticket", "known_issue"], "required_sql_tables": ["tickets"]},
+    {"id": "Q02", "question": "支付模块当前有哪些高优先级未关闭工单？", "category": "payment", "expected_source_types": ["ticket"], "required_sql_tables": ["tickets"]},
+    {"id": "Q03", "question": "哪个产品模块的高优先级工单最集中？", "category": null, "expected_source_types": ["ticket"], "required_sql_tables": ["tickets", "product_modules"]},
+    {"id": "Q04", "question": "登录模块最近积压最多的问题是什么？", "category": "login", "expected_source_types": ["ticket", "sop"], "required_sql_tables": ["tickets"]},
+    {"id": "Q05", "question": "哪些工单的首次响应可能超过 SLA？", "category": null, "expected_source_types": ["ticket"], "required_sql_tables": ["tickets", "sla_policies"]},
+    {"id": "Q06", "question": "哪些高优先级工单可能已经超过解决 SLA？", "category": null, "expected_source_types": ["ticket"], "required_sql_tables": ["tickets", "sla_policies"]},
+    {"id": "Q07", "question": "哪些匿名客户在一周内重复反馈登录问题？", "category": "login", "expected_source_types": ["ticket"], "required_sql_tables": ["tickets", "customers"]},
+    {"id": "Q08", "question": "支付回调延迟应该参考哪条已知问题？", "category": "payment", "expected_source_types": ["known_issue"], "required_sql_tables": []},
+    {"id": "Q09", "question": "登录失败的 SOP 推荐如何处理？", "category": "login", "expected_source_types": ["sop"], "required_sql_tables": []},
+    {"id": "Q10", "question": "订单状态未更新应参考哪些服务知识？", "category": "order", "expected_source_types": ["faq"], "required_sql_tables": []},
+    {"id": "Q11", "question": "按类别统计当前未关闭工单数量。", "category": null, "expected_source_types": ["ticket"], "required_sql_tables": ["tickets"]},
+    {"id": "Q12", "question": "按优先级统计支付类未解决工单。", "category": "payment", "expected_source_types": ["ticket"], "required_sql_tables": ["tickets"]},
+    {"id": "Q13", "question": "哪些模块的未关闭工单占比最高？", "category": null, "expected_source_types": ["ticket"], "required_sql_tables": ["tickets", "product_modules"]},
+    {"id": "Q14", "question": "工单生命周期中哪些事件最常出现？", "category": null, "expected_source_types": ["ticket"], "required_sql_tables": ["ticket_events"]},
+    {"id": "Q15", "question": "当前 SLA 策略覆盖了哪些类别和优先级？", "category": null, "expected_source_types": [], "required_sql_tables": ["sla_policies"]}
+  ]
+}

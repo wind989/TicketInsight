@@ -1,0 +1,20 @@
+{
+  "version": "semantic-review-v1",
+  "items": [
+    {"id": "Q01", "scores": {"directness": null, "evidence_grounding": null, "limitation_honesty": null}},
+    {"id": "Q02", "scores": {"directness": null, "evidence_grounding": null, "limitation_honesty": null}},
+    {"id": "Q03", "scores": {"directness": null, "evidence_grounding": null, "limitation_honesty": null}},
+    {"id": "Q04", "scores": {"directness": null, "evidence_grounding": null, "limitation_honesty": null}},
+    {"id": "Q05", "scores": {"directness": null, "evidence_grounding": null, "limitation_honesty": null}},
+    {"id": "Q06", "scores": {"directness": null, "evidence_grounding": null, "limitation_honesty": null}},
+    {"id": "Q07", "scores": {"directness": null, "evidence_grounding": null, "limitation_honesty": null}},
+    {"id": "Q08", "scores": {"directness": null, "evidence_grounding": null, "limitation_honesty": null}},
+    {"id": "Q09", "scores": {"directness": null, "evidence_grounding": null, "limitation_honesty": null}},
+    {"id": "Q10", "scores": {"directness": null, "evidence_grounding": null, "limitation_honesty": null}},
+    {"id": "Q11", "scores": {"directness": null, "evidence_grounding": null, "limitation_honesty": null}},
+    {"id": "Q12", "scores": {"directness": null, "evidence_grounding": null, "limitation_honesty": null}},
+    {"id": "Q13", "scores": {"directness": null, "evidence_grounding": null, "limitation_honesty": null}},
+    {"id": "Q14", "scores": {"directness": null, "evidence_grounding": null, "limitation_honesty": null}},
+    {"id": "Q15", "scores": {"directness": null, "evidence_grounding": null, "limitation_honesty": null}}
+  ]
+}
