@@ -54,6 +54,7 @@ TicketInsight 面向客服主管、售后运营和产品运营，目标是将“
 
 - docs/requirements.md
 - docs/architecture.md
+- docs/diagrams.md（系统流程图与业务流程图）
 - ../项目设计/TicketInsight/设计蓝图.md
 
 ## 当前骨架的本地启动
