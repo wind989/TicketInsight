@@ -21,7 +21,7 @@ SSE is not a report API. Read the final persisted, auditable report through the 
 
 > 2026-08-10 本机模型验证：已显式下载 `BAAI/bge-small-zh-v1.5` 到本项目忽略的 `.model-cache/`，并完成离线加载与 512 维向量编码验证。生产运行时仍只允许本地加载，不会隐式下载模型。
 
-> 2026-08-10 本机服务验证：Docker MySQL 8.4 与 Qdrant 已使用专用卷启动；迁移至 `20260809_0002` 后导入合成数据，并完成真实 BGE+Qdrant 检索及只读 MySQL 查询验收。服务仅绑定 `127.0.0.1` 的数据端口，应用 HTTP 入口为 `http://127.0.0.1:8010`。
+> 2026-08-10 本机服务验证：Docker MySQL 8.4 与 Qdrant 已使用专用卷启动；迁移至 `20260809_0002` 后导入合成数据，并完成真实 BGE+Qdrant 检索及只读 MySQL 查询验收。MySQL、Qdrant 和应用 HTTP 端口均仅绑定 `127.0.0.1`；应用入口为 `http://127.0.0.1:8010`。
 
 > 2026-08-10 检索基线：在 15 条固定合成运营题中，14 条具有可评分的证据类型标签；真实 BGE+Qdrant 的 Top-1 为 10/14（71.43%），Recall@3 为 14/14（100%）。该指标仅代表当前小型合成语料，不外推真实客服数据或完整 Agent 质量。
 
@@ -44,7 +44,7 @@ TicketInsight 面向客服主管、售后运营和产品运营，目标是将“
 | P2 | sqlglot AST 白名单、行数限制、SQLite 隔离执行、真实 MySQL 只读有界查询与审计；SLA 专用 `TIMESTAMPDIFF` 最小放行 | 更广泛性能压测未执行 |
 | P3 | LangGraph 固定图、SQL/结论各一次修订上限、运行记录与持久化、真实 DeepSeek 合成 E2E | 不增加写操作或开放式工具调用 |
 | P4 | 15 条固定运营题、19 条 SQL 安全评测、完整真实 Agent 合成基线（13 completed、2 limited、0 failed）、数值化人工语义评审框架 | 结论语义正确性尚无人工标注评分 |
-| P5 | 脱敏 JSON 日志、离线演示、Docker Compose、MySQL/Qdrant/App 本机容器与 SSE 验证、CI 配置 | 远程 CI 与生产部署验收未执行 |
+| P5 | 脱敏 JSON 日志、离线演示、Docker Compose、MySQL/Qdrant/App 本机容器与 SSE 验证、GitHub Actions 远程 CI | 生产部署验收未执行 |
 
 ## 目标架构
 
@@ -111,13 +111,13 @@ P0 会拒绝包含明显邮箱或中国大陆手机号的工单/知识文本，�
 
 ## Docker 与 CI
 
-`docker-compose.yml` 将业务运行、只读分析和迁移账号分离；迁移容器只在 `maintenance` profile 下运行，应用容器不接收迁移 URL。本机已用最新镜像启动 MySQL、Qdrant 与应用容器，验证 `/health`、`/ready` 与完成运行的 SSE 安全终态。`requirements.lock` 固定已验证的 Python 3.11 依赖，Docker 基础镜像固定到已验证摘要；GitHub Actions 使用相同约束运行编译、测试和依赖检查，但尚未在远程执行。
+`docker-compose.yml` 将业务运行、只读分析和迁移账号分离；迁移容器只在 `maintenance` profile 下运行，应用容器不接收迁移 URL。MySQL、Qdrant 和应用 HTTP 端口均只绑定 `127.0.0.1`。本机已用最新镜像启动 MySQL、Qdrant 与应用容器，验证 `/health`、`/ready` 与完成运行的 SSE 安全终态。`requirements.lock` 固定已验证的 Python 3.11 依赖，Docker 基础镜像固定到已验证摘要；GitHub Actions 使用相同约束在干净 Ubuntu 环境完成编译、测试和依赖检查。
 
 ## 当前骨架的测试
 
 执行 `./.venv/Scripts/python.exe -m pytest -q`。
 
-当前本机证据：51 项 pytest 通过；`compileall`、`pip check` 与 Docker Compose 配置检查通过；固定 SQL 安全评测为 19/19。真实 MySQL、Qdrant、本地 BGE、15 题真实模型固定集和最新 Docker SSE 容器均已验证；远程 CI 与生产部署仍未验证。固定评测报告只含脱敏聚合事实，不能替代真实客户场景或人工语义验收。
+当前本机证据：51 项 pytest 通过；`compileall`、`pip check` 与 Docker Compose 配置检查通过；固定 SQL 安全评测为 19/19。真实 MySQL、Qdrant、本地 BGE、15 题真实模型固定集和最新 Docker SSE 容器均已验证；GitHub Actions 已在干净 Ubuntu 环境成功运行。生产部署仍未验证。固定评测报告只含脱敏聚合事实，不能替代真实客户场景或人工语义验收。
 
 ## 数据与安全承诺
 
