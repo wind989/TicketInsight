@@ -1,23 +1,19 @@
 # TicketInsight
 
-## SSE progress (status only)
+## SSE 进度（仅状态）
 
 中文 API 约束说明见 `docs/api.md`。
 
-Start one independent analysis with `POST /api/v1/analysis-runs/async`. It returns `202`, a run ID, and an
-`events_url`; subscribe with `GET /api/v1/analysis-runs/{run_id}/events` using `text/event-stream`.
-Each `progress` event contains only `run_id`, stage, status, an approved short summary, and a timestamp. The
-in-process tail is capped at 32 events per run. It is not token streaming and never carries raw SQL, ticket or
-knowledge text, model output, credentials, connection strings, or a final conclusion.
+通过 `POST /api/v1/analysis-runs/async` 启动一次独立分析。接口返回 `202`、运行 ID 和
+`events_url`；使用 `text/event-stream` 通过 `GET /api/v1/analysis-runs/{run_id}/events` 订阅进度。
+每个 `progress` 事件仅包含 `run_id`、阶段、状态、经过批准的简短摘要和时间戳。每次运行的进程内事件尾部最多保留 32 个事件。
+它不是 token 流式传输，并且绝不携带原始 SQL、工单或知识文本、模型输出、凭据、连接字符串或最终结论。
 
-An unknown run ID returns `404`. This local prototype has no authentication layer; when one is introduced, an
-unowned run must receive the same `404` response. Disconnecting a client only closes its subscription: the
-background analysis owns a separate database session and still persists its terminal state. Completed, limited,
-and failed runs emit one terminal status event. After a process restart removes the bounded event tail, the stream
-may emit only a durable, safe terminal status.
+未知的运行 ID 返回 `404`。当前本地原型没有认证层；未来引入认证后，未归属的运行也必须返回相同的 `404` 响应。
+断开客户端只会关闭其订阅；后台分析使用独立的数据库会话，并且仍会持久化终态。已完成、受限和失败的运行都会发出一个终态状态事件。
+进程重启会清除有界事件尾部，此后流可能只发出持久化且安全的终态状态。
 
-SSE is not a report API. Read the final persisted, auditable report through the existing
-`GET /api/v1/analysis-runs/{run_id}` endpoint after its terminal event.
+SSE 不是报告 API。终态事件之后，请通过现有的 `GET /api/v1/analysis-runs/{run_id}` 端点读取最终持久化、可审计的报告。
 
 > 2026-08-10 本机模型验证：已显式下载 `BAAI/bge-small-zh-v1.5` 到本项目忽略的 `.model-cache/`，并完成离线加载与 512 维向量编码验证。生产运行时仍只允许本地加载，不会隐式下载模型。
 
