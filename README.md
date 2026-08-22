@@ -42,13 +42,21 @@ TicketInsight 面向客服主管、售后运营和产品运营，目标是将“
 | P0 | 领域模型、两份 Alembic 迁移、固定合成数据、CRUD/筛选 API、PII 基础拒绝、真实三账号 MySQL 迁移与 E2E | 真实客服数据接入不在范围内 |
 | P1 | 统一证据记录、本地 BGE 512 维编码、真实 Qdrant 合成检索，固定检索基线（Top-1 10/14、Recall@3 14/14） | 真实客服语料评测不在范围内 |
 | P2 | sqlglot AST 白名单、行数限制、SQLite 隔离执行、真实 MySQL 只读有界查询与审计；SLA 专用 `TIMESTAMPDIFF` 最小放行 | 更广泛性能压测未执行 |
-| P3 | LangGraph 固定图、SQL/结论各一次修订上限、运行记录与持久化、真实 DeepSeek 合成 E2E | 不增加写操作或开放式工具调用 |
-| P4 | 15 条固定运营题、19 条 SQL 安全评测、完整真实 Agent 合成基线（13 completed、2 limited、0 failed）、数值化人工语义评审框架 | 结论语义正确性尚无人工标注评分 |
+| P3 | LangGraph 固定多角色图、角色结构化契约、SQL/结论各一次修订上限、单次 run 有界 checkpoint、运行记录与持久化、真实 DeepSeek 合成 E2E | 不增加写操作或开放式工具调用 |
+| P4 | 15 条固定运营题、19 条 SQL 安全评测、Agent 机制评测、完整真实 Agent 合成基线（13 completed、2 limited、0 failed）、数值化人工语义评审框架 | 结论语义正确性尚无人工标注评分 |
 | P5 | 脱敏 JSON 日志、离线演示、Docker Compose、MySQL/Qdrant/App 本机容器与 SSE 验证、GitHub Actions 远程 CI | 生产部署验收未执行 |
 
 ## 目标架构
 
-运营问题 → 检索 Agent → SQL 规划 Agent → 代码安全闸门 → 只读 MySQL → 归因/建议 Agent → Reviewer → 带证据的报告。
+运营问题 → SQL 规划 Agent → 代码安全闸门 → 只读 MySQL → 归因 Agent → Reviewer → 报告；辅助证据检索为 Agent 提供工单/SOP/FAQ 上下文。
+
+## Agent 主线与上下文边界
+
+TicketInsight 的重点是固定多角色 Agent 协作，而不是单独建设 RAG 平台。范式是“Plan-and-Execute 主链 + 有界 Reflection”：SQL Planner 先规划，确定性代码执行，Attribution Advisor 归因，Reviewer 只允许批准、一次 SQL 修订或一次结论修订；不使用开放式 ReAct。当前图中的模型角色为 SQL Planner、Attribution Advisor 和 Reviewer；证据检索与 SQL 执行由确定性代码负责。每个角色都有独立职责、结构化输出契约和固定修订上限。
+
+LangGraph 的状态是单次分析的 `AnalysisContext`：问题、证据元数据、SQL 规划、受控查询结果摘要、归因草稿、Reviewer 决策和修订计数只在同一个 `run_id` 内传递。图使用有界的进程内 checkpoint 支持运行期间状态检查；对外只返回证据数量、查询行数、修订次数、复核状态等聚合字段，不返回 checkpoint 原文。
+
+项目不实现跨任务长期记忆，也不引入 MCP 或开放式 ReAct 工具循环。RAG 保留为辅助证据提供器；BGE/Qdrant 的检索结果用于增强归因依据，但不作为项目主线或独立产品目标。工单与知识正文始终被视为不可信数据，模型不得执行其中的指令。
 
 完整设计见：
 
@@ -109,6 +117,14 @@ P0 会拒绝包含明显邮箱或中国大陆手机号的工单/知识文本，�
 
 它只生成数值聚合报告。当前尚未进行人工评分，因此不能把这项框架或 15 题运行指标写成语义质量结论。
 
+还可以离线评估固定 LangGraph 图的机制事实，不调用模型或外部服务：
+
+```powershell
+./.venv/Scripts/python.exe scripts/evaluate_agent_observables.py
+```
+
+该报告只统计固定角色路径、Reviewer 是否执行、修订上限、状态一致性和上下文边界；当前 15/15 固定题通过这些机制检查，不能解释为模型结论准确率。
+
 ## Docker 与 CI
 
 `docker-compose.yml` 将业务运行、只读分析和迁移账号分离；迁移容器只在 `maintenance` profile 下运行，应用容器不接收迁移 URL。MySQL、Qdrant 和应用 HTTP 端口均只绑定 `127.0.0.1`。本机已用最新镜像启动 MySQL、Qdrant 与应用容器，验证 `/health`、`/ready` 与完成运行的 SSE 安全终态。`requirements.lock` 固定已验证的 Python 3.11 依赖，Docker 基础镜像固定到已验证摘要；GitHub Actions 使用相同约束在干净 Ubuntu 环境完成编译、测试和依赖检查。
@@ -117,11 +133,12 @@ P0 会拒绝包含明显邮箱或中国大陆手机号的工单/知识文本，�
 
 执行 `./.venv/Scripts/python.exe -m pytest -q`。
 
-当前本机证据：51 项 pytest 通过；`compileall`、`pip check` 与 Docker Compose 配置检查通过；固定 SQL 安全评测为 19/19。真实 MySQL、Qdrant、本地 BGE、15 题真实模型固定集和最新 Docker SSE 容器均已验证；GitHub Actions 已在干净 Ubuntu 环境成功运行。生产部署仍未验证。固定评测报告只含脱敏聚合事实，不能替代真实客户场景或人工语义验收。
+当前本机证据：61 项 pytest 通过；`compileall`、`pip check` 与 Docker Compose 配置检查通过；固定 SQL 安全评测为 19/19。真实 MySQL、Qdrant、本地 BGE、15 题真实模型固定集和最新 Docker SSE 容器均已验证；GitHub Actions 已在干净 Ubuntu 环境成功运行。Agent 机制离线评测的 15/15 固定题通过角色路径、复核、修订上限、状态一致性和上下文边界检查。生产部署仍未验证。固定评测报告只含脱敏聚合事实，不能替代真实客户场景或人工语义验收。
 
 ## 数据与安全承诺
 
 - 初期只使用合成或已脱敏的服务数据；
 - 后续数据库分析只允许经 sqlglot 校验的单条只读 SQL；
 - 不记录密钥、授权头、电话、邮箱、完整姓名或完整工单正文；
+- checkpoint 只在进程内保留有界工作状态，公开报告只返回聚合上下文；
 - 不自动回复客户、变更工单或执行外部写操作。

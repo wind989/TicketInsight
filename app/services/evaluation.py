@@ -14,6 +14,7 @@ from app.services.sql_safety import SQLSafetyError, validate_readonly_select
 ROOT = Path(__file__).resolve().parents[2]
 QUESTION_SET_PATH = ROOT / "evaluation_sets" / "synthetic_operations_v1.json"
 SQL_SAFETY_SET_PATH = ROOT / "evaluation_sets" / "sql_safety_v1.json"
+FIXED_AGENT_NODES = ("retrieve_evidence", "plan_sql", "execute_safe_sql", "draft_analysis", "review")
 
 
 def load_question_set(path: Path = QUESTION_SET_PATH) -> dict[str, Any]:
@@ -106,5 +107,52 @@ def summarize_agent_scores(results: list[dict[str, Any]]) -> dict[str, Any]:
         "bounded_query_executions": len(executed),
         "bounded_query_execution_rate": round(len(executed) / total, 4) if total else None,
         "average_duration_ms": round(sum(durations) / len(durations)) if durations else None,
+        "semantic_conclusion_scoring": "not_automated",
+    }
+
+
+def score_agent_observables(result: WorkflowResult) -> dict[str, Any]:
+    """Score graph mechanics without judging the language model's prose.
+
+    These checks make the multi-role design measurable: every fixed role ran (or
+    the run was explicitly limited), revision ceilings held, the query status is
+    consistent with the report status, and the bounded context did not exceed its
+    configured evidence/row limits.
+    """
+
+    nodes = {trace["node"] for trace in result.trace}
+    snapshot = result.context_snapshot
+    return {
+        "status": result.status,
+        "fixed_role_path_observed": set(FIXED_AGENT_NODES).issubset(nodes),
+        "review_observed": "review" in nodes,
+        "revision_bounds_safe": result.sql_revisions <= 1 and result.conclusion_revisions <= 1,
+        "status_query_consistent": (result.status == "completed") == (result.query_result is not None),
+        "context_bounds_safe": bool(
+            snapshot is not None and snapshot.evidence_count <= 8 and snapshot.query_row_count <= 50
+        ),
+        "checkpoint_run_id_present": bool(result.run_id),
+        "trace_node_count": len(result.trace),
+    }
+
+
+def summarize_agent_observables(results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Return safe percentages for the fixed graph mechanics, not semantic accuracy."""
+
+    total = len(results)
+
+    def rate(key: str) -> float | None:
+        if not total:
+            return None
+        return round(sum(bool(item[key]) for item in results) / total, 4)
+
+    return {
+        "total_runs": total,
+        "fixed_role_path_rate": rate("fixed_role_path_observed"),
+        "review_observed_rate": rate("review_observed"),
+        "revision_bounds_safe_rate": rate("revision_bounds_safe"),
+        "status_query_consistency_rate": rate("status_query_consistent"),
+        "context_bounds_safe_rate": rate("context_bounds_safe"),
+        "checkpoint_run_id_rate": rate("checkpoint_run_id_present"),
         "semantic_conclusion_scoring": "not_automated",
     }

@@ -49,6 +49,8 @@ def test_analysis_run_persists_redacted_evidence_audit_trace_and_feedback():
         feedback = add_feedback(session, persisted.run_id, helpful=True, reason_redacted="统计与证据可复查。")
         run = session.get(AnalysisRun, persisted.run_id)
         assert run is not None and run.status == "completed"
+        assert persisted.result.run_id == persisted.run_id
+        assert persisted.result.context_snapshot is not None
         assert session.scalars(select(AnalysisEvidence).where(AnalysisEvidence.run_id == persisted.run_id)).one().business_id == 7
         assert session.scalars(select(SQLAudit).where(SQLAudit.run_id == persisted.run_id)).one().audit_sql is not None
         assert len(list(session.scalars(select(AgentTrace).where(AgentTrace.run_id == persisted.run_id)))) == 5

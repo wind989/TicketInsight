@@ -16,7 +16,7 @@ from app.services.agent_workflow import TicketInsightWorkflow, WorkflowResult
 from app.services.progress import progress_events
 
 
-GRAPH_VERSION = "fixed-langgraph-v1"
+GRAPH_VERSION = "fixed-langgraph-v2-agent-contracts"
 
 
 @dataclass(frozen=True)
@@ -99,6 +99,7 @@ def execute_pending_run(run_id: str, workflow: TicketInsightWorkflow) -> Persist
         try:
             result = workflow.run(
                 run.question_redacted,
+                run_id=run.id,
                 progress_reporter=lambda stage, event_status, summary: progress_events.emit(
                     run_id, stage, event_status, summary
                 ),
@@ -146,7 +147,7 @@ def run_and_persist(
     session.add(run)
     session.flush()
     try:
-        result = workflow.run(safe_question)
+        result = workflow.run(safe_question, run_id=run.id)
     except Exception as error:
         run.status = "failed"
         run.total_duration_ms = round((perf_counter() - started_at) * 1000)

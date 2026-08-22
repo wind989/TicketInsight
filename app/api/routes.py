@@ -16,7 +16,7 @@ from app.core import database
 from app.core.database import get_session
 from app.models import AgentTrace, AnalysisEvidence, AnalysisRun, Customer, ProductModule, SLAPolicy, SQLAudit, ServiceKnowledge, Ticket, TicketEvent
 from app.schemas import (
-    AnalysisFeedbackCreate, AnalysisFeedbackRead, AnalysisReportRead, AnalysisRequest, AnalysisRunStarted, CustomerCreate, CustomerRead,
+    AnalysisContextRead, AnalysisFeedbackCreate, AnalysisFeedbackRead, AnalysisReportRead, AnalysisRequest, AnalysisRunStarted, CustomerCreate, CustomerRead,
     CustomerUpdate, ProductModuleCreate, ProductModuleRead, ProductModuleUpdate, SeedSummary, ServiceKnowledgeCreate,
     ServiceKnowledgeRead, ServiceKnowledgeUpdate, SLAPolicyCreate,
     SLAPolicyRead, SLAPolicyUpdate, TicketCreate, TicketEventCreate, TicketEventRead, TicketEventUpdate,
@@ -343,6 +343,20 @@ def seed_demo_data(session: SessionDep) -> dict[str, int | bool]:
 
 def _analysis_report(session: Session, run_id: str) -> dict[str, Any]:
     run = _get_or_404(session, AnalysisRun, run_id, "分析运行")
+    evidence = list(session.scalars(select(AnalysisEvidence).where(AnalysisEvidence.run_id == run_id).order_by(AnalysisEvidence.id)))
+    sql_audits = list(session.scalars(select(SQLAudit).where(SQLAudit.run_id == run_id).order_by(SQLAudit.attempt_index)))
+    traces = list(session.scalars(select(AgentTrace).where(AgentTrace.run_id == run_id).order_by(AgentTrace.id)))
+    review_trace = next((trace for trace in reversed(traces) if trace.node == "review"), None)
+    context = AnalysisContextRead(
+        checkpoint_count=len(traces),
+        evidence_count=len(evidence),
+        query_row_count=max((audit.row_count or 0) for audit in sql_audits) if sql_audits else 0,
+        sql_revisions=max(0, len(sql_audits) - 1),
+        conclusion_revisions=sum(1 for trace in traces if trace.node == "draft_analysis") - 1
+        if any(trace.node == "draft_analysis" for trace in traces)
+        else 0,
+        review_decision=review_trace.status if review_trace else None,
+    )
     return {
         "id": run.id,
         "question_redacted": run.question_redacted,
@@ -354,9 +368,10 @@ def _analysis_report(session: Session, run_id: str) -> dict[str, Any]:
         "limitations": run.limitations,
         "created_at": run.created_at,
         "completed_at": run.completed_at,
-        "evidence": list(session.scalars(select(AnalysisEvidence).where(AnalysisEvidence.run_id == run_id).order_by(AnalysisEvidence.id))),
-        "sql_audits": list(session.scalars(select(SQLAudit).where(SQLAudit.run_id == run_id).order_by(SQLAudit.attempt_index))),
-        "traces": list(session.scalars(select(AgentTrace).where(AgentTrace.run_id == run_id).order_by(AgentTrace.id))),
+        "context": context,
+        "evidence": evidence,
+        "sql_audits": sql_audits,
+        "traces": traces,
     }
 
 

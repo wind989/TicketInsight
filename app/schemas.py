@@ -270,6 +270,19 @@ class AgentTraceRead(ORMModel):
     duration_ms: int
 
 
+class AnalysisContextRead(BaseModel):
+    """Aggregate-only per-run context; never expose checkpoint payloads."""
+
+    scope: Literal["single_run"] = "single_run"
+    checkpoint_scope: Literal["process_local_bounded"] = "process_local_bounded"
+    checkpoint_count: int = Field(ge=0)
+    evidence_count: int = Field(ge=0)
+    query_row_count: int = Field(ge=0)
+    sql_revisions: int = Field(ge=0, le=1)
+    conclusion_revisions: int = Field(ge=0, le=1)
+    review_decision: str | None = None
+
+
 class AnalysisFeedbackRead(ORMModel):
     id: int
     helpful: bool
@@ -288,6 +301,7 @@ class AnalysisReportRead(ORMModel):
     limitations: str | None
     created_at: datetime
     completed_at: datetime | None
+    context: AnalysisContextRead | None = None
     evidence: list[AnalysisEvidenceRead]
     sql_audits: list[SQLAuditRead]
     traces: list[AgentTraceRead]

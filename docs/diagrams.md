@@ -19,7 +19,7 @@ flowchart TB
         resource_api["领域资源 API\n客户、工单、SLA、模块、事件、服务知识"]
         analysis_api["分析 API\n同步运行 / 异步启动\n报告与反馈查询"]
         run_store["运行服务\n创建 run、持久化终态\n保存脱敏报告要素"]
-        progress["进度注册表\n每个 run 最多 32 条\n只保留状态安全摘要"]
+        progress["进度与上下文注册表\n每个 run 有界 checkpoint\n只保留状态安全摘要"]
         sse["SSE 流\ntext/event-stream\n心跳、断开不取消任务"]
         logs["脱敏 JSON 日志\n不记录密钥、授权头、正文、原始模型输出"]
 
@@ -34,14 +34,14 @@ flowchart TB
     swagger --> input_guard
     sse_client --> sse
 
-    subgraph graph["固定 LangGraph 分析图（无开放式 ReAct 循环）"]
+    subgraph graph["固定多角色 LangGraph 分析图（无开放式 ReAct 循环）"]
         direction TB
-        retrieve["1. 证据检索节点"]
-        planner["2. SQL 规划节点\nLLM 只输出候选计划"]
+        retrieve["辅助证据检索节点\n为 Agent 提供工单/SOP/FAQ 上下文"]
+        planner["SQL Planner Agent\nLLM 只输出候选计划"]
         gate["3. 确定性 SQL 安全闸门\nsqlglot AST、单条 SELECT\n表/列白名单、LIMIT、超时\nTIMESTAMPDIFF 仅 SLA 安全子集"]
         executor["4. 有界只读执行器\n行数限制 + 查询超时"]
-        advisor["5. 归因建议节点\nLLM 仅基于受限输入起草"]
-        reviewer["6. Reviewer / Reflection\n批准、一次 SQL 修订或一次结论修订"]
+        advisor["Attribution Advisor Agent\nLLM 仅基于受限输入起草"]
+        reviewer["Reviewer Agent / Reflection\n批准、一次 SQL 修订或一次结论修订"]
         terminal["终态\ncompleted / limited / failed"]
 
         retrieve --> planner --> gate
